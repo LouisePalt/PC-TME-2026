@@ -13,6 +13,25 @@ public class WordFrequency {
 	
 	private static class WordCount {
 		// TODO : essentiellement un mot et un compteur
+        private String word;
+        private int count;
+
+        public WordCount(String word) {
+            this.word = word;
+            this.count = 1;
+        }
+
+        public void increment() {
+            this.count++;
+        }
+
+        public String getWord() {
+            return word;
+        }
+
+        public int getCount() {
+            return count;
+        }
 	}
 
     public static void main(String[] args) throws IOException {
@@ -55,7 +74,9 @@ public class WordFrequency {
                 if (!word.isEmpty()) {
                     totalWords++;
                     // TODO : tester si le mot "word" déjà dans "words"
-                    
+                    if (!words.contains(word)) {
+                        words.add(word);
+                    }
                 }
             }
         	System.out.println("Total words: " + totalWords);
@@ -67,19 +88,34 @@ public class WordFrequency {
                 String word = cleanWord(scanner.next());
                 if (!word.isEmpty()) {
                     totalWords++;
+                    boolean exists = false;
                     // TODO : trouver si le mot est déjà dans "words"
                     // si oui incrémenter son compteur
+                    for (WordCount wordCount : words) {
+                        if (wordCount.getWord().equals(word)) {
+                            wordCount.increment();
+                            exists = true;
+                            break;
+                        }
+                    }
                     // sinon l'ajouter à la liste
+                    if(!exists) {
+                        words.add(new WordCount(word));
+                    }
                 }
             }
         	System.out.println("Total words: " + totalWords);
         	System.out.println("Unique words: " + words.size());
             // TODO : trier la liste par fréquence décroissante puis ordre alphabétique croissant
-
-        	// puis afficher les 5 mots les plus fréquents avec leur fréquence
-//            for (WordCount wc : words.subList(0, 5)) {
-//				System.out.println(wc.getCount() + " " + wc.getWord());
-//			}
+            words.sort((w1, w2) -> {
+                int cmp = Integer.compare(w2.getCount(), w1.getCount());
+                if (cmp != 0) return cmp;
+                return w1.getWord().compareTo(w2.getWord());
+            });
+            // puis afficher les 5 mots les plus fréquents avec leur fréquence
+            for (WordCount wc : words.subList(0, 5)) {
+				System.out.println(wc.getCount() + " " + wc.getWord());
+			}
         } else if (mode.equals("tree")) {
         	long totalWords = 0;
             Map<String, Integer> map = new TreeMap<>();
@@ -88,6 +124,11 @@ public class WordFrequency {
                 if (!word.isEmpty()) {
                     totalWords++;
                     // TODO : mettre à jour la map
+                    if(map.containsKey(word)) {
+                        map.put(word, map.get(word) + 1);
+                    } else {
+                        map.put(word, 1);
+                    }
                 }
             }
             System.out.println("Total words: " + totalWords);
@@ -95,8 +136,17 @@ public class WordFrequency {
 
             
             // TODO : extraire le map dans une ArrayList
+            List<Map.Entry<String, Integer>> list = new ArrayList<>(map.entrySet());
             // trier la liste par fréquence décroissante puis ordre alphabétique croissant
+            list.sort((e1, e2) -> {
+                int cmp = Integer.compare(e2.getValue(), e1.getValue());
+                if (cmp != 0) return cmp;
+                return e1.getKey().compareTo(e2.getKey());
+            });
         	// puis afficher les 5 mots les plus fréquents avec leur fréquence
+            for(int i = 0; i < 5; i++) {
+                System.out.println(list.get(i).getKey() + " " + list.get(i).getValue());
+            }
 
         } else if (mode.equals("hash")) {
         	long totalWords = 0;
@@ -106,14 +156,28 @@ public class WordFrequency {
                 if (!word.isEmpty()) {
                     totalWords++;
                     // TODO : mettre à jour la map
+                    if(map.containsKey(word)) {
+                        map.put(word, map.get(word) + 1);
+                    } else {
+                        map.put(word, 1);
+                    }
                 }
             }
             System.out.println("Total words: " + totalWords);
             System.out.println("Unique words: " + map.size());
 
             // TODO : extraire le map dans une ArrayList
+            List<Map.Entry<String, Integer>> list = new ArrayList<>(map.entrySet());
             // trier la liste par fréquence décroissante puis ordre alphabétique croissant
+            list.sort((e1, e2) -> {
+                int cmp = Integer.compare(e2.getValue(), e1.getValue());
+                if (cmp != 0) return cmp;
+                return e1.getKey().compareTo(e2.getKey());
+            });
         	// puis afficher les 5 mots les plus fréquents avec leur fréquence
+            for(int i = 0; i < 5; i++) {
+                System.out.println(list.get(i).getKey() + " " + list.get(i).getValue());
+            }
 
         } else {
             System.err.println("Unknown mode '" + mode + "'. Supported modes: count, list, listfreq, tree, hash");

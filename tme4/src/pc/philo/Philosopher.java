@@ -1,5 +1,7 @@
 package pc.philo;
 
+import java.lang.InterruptedException;
+
 public class Philosopher implements Runnable {
 	private Fork left;
 	private Fork right;
@@ -10,9 +12,30 @@ public class Philosopher implements Runnable {
 	}
 
 	public void run() {
-		// TODO
-		
-		// System.out.println(Thread.currentThread().getName() + " has one fork");
+		while(!Thread.currentThread().isInterrupted()) {
+			boolean leftHeld = false;
+			boolean rightHeld = false;
+
+			try {
+				this.think();
+				left.acquire();
+				leftHeld = true;
+				System.out.println(Thread.currentThread().getName() + " has one fork");
+				right.acquire();
+				rightHeld = true;
+				System.out.println(Thread.currentThread().getName() + " has two fork");
+				this.eat();
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			} finally {
+				if(leftHeld) {
+					left.release();
+				}
+				if(rightHeld) {
+					right.release();
+				}
+			}
+		}
 	}
 
 	private void eat() {
