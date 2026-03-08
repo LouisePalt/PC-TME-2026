@@ -6,7 +6,7 @@ import life.ui.LifePanel;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class NaiveModeSafe implements LifeMode {
+public class MtSafeMode implements LifeMode {
     @Override
     public String getName() {
         return "mtsafe";

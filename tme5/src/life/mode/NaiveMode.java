@@ -44,10 +44,6 @@ public final class NaiveMode implements LifeMode {
 			try {
 				while (true) {
 					model.updateNext(startRow, endRow);
-					int d = delayMs.get();
-					if (d > 0) {
-						Thread.sleep(d);
-					}
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
