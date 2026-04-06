@@ -23,7 +23,7 @@ public class Renderer {
     private static final int MAX_REFLECTION_BOUNCES = 5;
     private static final boolean SHOW_SKYBOX = true;
     private static final ThreadPool pool = new ThreadPool(100, Runtime.getRuntime().availableProcessors());
-    private static ExecutorService exec = Executors.newFixedThreadPool(4);
+    private static ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor();
 
     public static float bloomIntensity = 0.5F;
     public static int bloomRadius = 10;
@@ -55,7 +55,7 @@ public class Renderer {
      */
     public static void renderScene(Scene scene, Graphics gfx, int width, int height, float resolution) {
 
-        renderScenePoolPixel(scene, gfx, width, height, resolution);
+        renderSceneExecutorCol(scene, gfx, width, height, resolution);
 
     }
 
@@ -199,6 +199,7 @@ public class Renderer {
 
         try {
             latch.await();
+            gfx.drawImage(image, 0, 0, null);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

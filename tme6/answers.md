@@ -216,3 +216,89 @@ cette approche offre un bon "compromis" : moins de tâches (une par colonne), to
 
 #### conclusion :  
 le principal facteur limitant est la synchronisation sur Graphics, qui implique une forte contention, après suppression une granularité trop fine (pixel) dégrade les performances, tandis qu’une granularité plus grande (colonne) permet d’obtenir de meilleurs résultats.
+
+## TME 7 - ExecutorService du JDK
+
+### Question 2
+
+#### `newFixedThreadPool(4)` :
+```shell
+Loading skybox Sky.jpg...
+Rendered in 2694ms
+Skybox ready.
+Rendered in 2016ms
+Rendered in 2401ms
+Rendered in 1773ms
+Rendered in 1800ms
+Rendered in 1787ms
+```
+
+#### `newSingleThreadExecutor()` :
+```shell
+Loading skybox Sky.jpg...
+Rendered in 2474ms
+Skybox ready.
+Rendered in 1856ms
+Rendered in 1826ms
+Rendered in 2031ms
+Rendered in 2261ms
+Rendered in 2325ms
+```
+
+#### `newFixedThreadPool(Runtime.getRuntime().availableProcessors())` :
+```shell
+Loading skybox Sky.jpg...
+Rendered in 2516ms
+Skybox ready.
+Rendered in 1835ms
+Rendered in 2114ms
+Rendered in 1830ms
+Rendered in 2086ms
+Rendered in 2207ms
+```
+
+#### `newThreadPerTaskExecutor(Thread.ofPlatform().factory())` :
+```shell
+Loading skybox Sky.jpg...
+Rendered in 2476ms
+Skybox ready.
+Rendered in 1835ms
+Rendered in 1760ms
+Rendered in 1796ms
+Rendered in 2099ms
+Rendered in 2097ms
+```
+
+#### `newVirtualThreadPerTaskExecutor()` :
+```shell
+Loading skybox Sky.jpg...
+Rendered in 2607ms
+Skybox ready.
+Rendered in 2131ms
+Rendered in 2188ms
+Rendered in 1952ms
+Rendered in 1882ms
+Rendered in 2045ms
+```
+
+#### observation :
+1. `newSingleThreadExecutor()`
+    -> ~1800–2300 ms
+2. `newFixedThreadPool(4)`
+    -> ~1750 et 2400 ms
+3. `newFixedThreadPool(Runtime.getRuntime().availableProcessors())`
+    -> ~1800–2200 ms
+4. `newThreadPerTaskExecutor(Thread.ofPlatform().factory())`
+    -> ~1750 et 2100 ms
+5. `newVirtualThreadPerTaskExecutor()`
+    -> ~1850–2200 ms
+
+#### conclusion :
+les différentes implémentations offrent des performances assez proches dans ce contexte.
+
+- `newSingleThreadExecutor` est le moins performant car il n’exploite pas le parallélisme.
+- `newThreadPerTaskExecutor` fonctionne correctement ici mais peut devenir inefficace si le nombre de tâches augmente.
+- `newVirtualThreadPerTaskExecutor` n’apporte pas de gain significatif.
+- `newFixedThreadPool` (avec une taille adaptée au nombre de cœurs) offre le meilleur compromis entre performance, stabilité et maîtrise des ressources.
+
+donc la configuration la plus pertinente pour améliorer le nombre de frames par seconde reste un `newFixedThreadPool` avec un nombre de threads proche du nombre de cœurs disponibles.
