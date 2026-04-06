@@ -10,16 +10,39 @@ import carlvbn.raytracing.solids.Solid;
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 public class Renderer {
     private static final float GLOBAL_ILLUMINATION = 0.3F;
     private static final float SKY_EMISSION = 0.5F;
     private static final int MAX_REFLECTION_BOUNCES = 5;
     private static final boolean SHOW_SKYBOX = true;
+    private static final ThreadPool pool = new ThreadPool(100, Runtime.getRuntime().availableProcessors());
 
     public static float bloomIntensity = 0.5F;
     public static int bloomRadius = 10;
+
+    public static void drawPixel(int x, int y, int blockSize, int width, int height, Scene scene, Graphics gfx) {
+
+        float[] uv = getNormalizedScreenCoordinates(x, y, width, height);
+        PixelData pixelData = computePixelInfo(scene, uv[0], uv[1]);
+
+        synchronized (gfx) {
+            gfx.setColor(pixelData.getColor().toAWTColor());
+            gfx.fillRect(x, y, blockSize, blockSize);
+        }
+    }
+
+    public static void drawPixelv2(int x, int y, int blockSize, int width, int height, Scene scene, BufferedImage image) {
+
+        float[] uv = getNormalizedScreenCoordinates(x, y, width, height);
+        PixelData pixelData = computePixelInfo(scene, uv[0], uv[1]);
+
+        fillColorRect(image, x, y, blockSize, blockSize, pixelData.getColor());
+    }
 
     /** Renders the scene to a java.awt.Graphics object
      * @param scene The scene to Render
@@ -28,18 +51,126 @@ public class Renderer {
      * @param resolution (Floating point greater than 0 and lower or equal to 1) Controls the number of rays traced. (1 = Every pixel is ray-traced)
      */
     public static void renderScene(Scene scene, Graphics gfx, int width, int height, float resolution) {
+
+        renderScenePoolCol(scene, gfx, width, height, resolution);
+
+    }
+
+    public static void renderSceneSequential(Scene scene, Graphics gfx, int width, int height, float resolution) {
+
         int blockSize = (int) (1 / resolution);
         long start = System.currentTimeMillis();
 
-        
+        for (int x = 0; x<width; x+=blockSize) {
+            for (int y = 0; y < height; y += blockSize) {
+                drawPixel(x, y, blockSize, width, height, scene, gfx);
+            }
+        }
+
+        System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
+    }
+
+    public static void renderSceneThreadPerPixel(Scene scene, Graphics gfx, int width, int height, float resolution) {
+        int blockSize = (int) (1 / resolution);
+        long start = System.currentTimeMillis();
+        List<Thread> threads = new ArrayList<>();
+
         for (int x = 0; x<width; x+=blockSize) {
             for (int y = 0; y<height; y+=blockSize) {
-                float[] uv = getNormalizedScreenCoordinates(x, y, width, height);
-                PixelData pixelData = computePixelInfo(scene, uv[0], uv[1]);
-
-                gfx.setColor(pixelData.getColor().toAWTColor());
-                gfx.fillRect(x, y, blockSize, blockSize);
+                final int xF = x;
+                final int yF = y;
+                Thread pixel = new Thread (() ->  {
+                    drawPixel(xF, yF, blockSize, width, height, scene, gfx);
+                });
+                threads.add(pixel);
+                pixel.start();
             }
+        }
+
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
+    }
+
+    public static void renderSceneThreadPerCol(Scene scene, Graphics gfx, int width, int height, float resolution) {
+        int blockSize = (int) (1 / resolution);
+        long start = System.currentTimeMillis();
+        List<Thread> threads = new ArrayList<>();
+
+        for (int x = 0; x<width; x+=blockSize) {
+                final int xF = x;
+                Thread pixel = new Thread (() ->  {
+                    for (int y = 0; y<height; y+=blockSize) {
+                        drawPixel(xF, y, blockSize, width, height, scene, gfx);
+                    }
+                });
+                threads.add(pixel);
+                pixel.start();
+        }
+
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
+
+        System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
+    }
+
+    public static void renderScenePoolCol(Scene scene, Graphics gfx, int width, int height, float resolution) {
+        int blockSize = (int) (1 / resolution);
+        long start = System.currentTimeMillis();
+        CountDownLatch latch = new CountDownLatch(width/blockSize);
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+        for (int x = 0; x<width; x+=blockSize) {
+            final int xF = x;
+            pool.execute(() ->  {
+                for (int y = 0; y<height; y+=blockSize) {
+                    drawPixelv2(xF, y, blockSize, width, height, scene, image);
+                }
+                latch.countDown();
+            });
+        }
+
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
+    }
+
+    public static void renderScenePoolPixel(Scene scene, Graphics gfx, int width, int height, float resolution) {
+        int blockSize = (int) (1 / resolution);
+        long start = System.currentTimeMillis();
+        CountDownLatch latch = new CountDownLatch((width/blockSize) * (height/blockSize));
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
+        for (int x = 0; x<width; x+=blockSize) {
+            for (int y = 0; y < height; y += blockSize) {
+                final int xF = x;
+                final int yF = y;
+                pool.execute(() -> {
+                    drawPixelv2(xF, yF, blockSize, width, height, scene, image);
+                    latch.countDown();
+                });
+            }
+        }
+
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
 
         System.out.println("Rendered in " + (System.currentTimeMillis() - start) + "ms");
