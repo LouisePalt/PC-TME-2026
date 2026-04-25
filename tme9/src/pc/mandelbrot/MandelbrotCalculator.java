@@ -21,7 +21,8 @@ public class MandelbrotCalculator {
 		long start = System.currentTimeMillis();
 		// TODO !!
 		// currently default to sequential
-		compute(boundingBox, maxIterations, imageBuffer);
+        MandelbrotTask mandelbrotTask = new MandelbrotTask(boundingBox, maxIterations, imageBuffer, 0, boundingBox.height);
+        mandelbrotTask.invoke();
 		System.out.println("Rendered image in " + (System.currentTimeMillis() - start) + " ms");
 	}
 

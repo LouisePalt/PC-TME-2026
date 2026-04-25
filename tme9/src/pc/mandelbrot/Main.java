@@ -10,8 +10,8 @@ public class Main {
 	public static void main(String[] args) {
 		// Define image parameters
 		int width = 800;
-		int height = 600;
-		int maxIterations = 5000;
+		int height = 400;
+		int maxIterations = 10000;
 
 		// Define output file name
 		String outputFileName = "mandelbrot.png";
@@ -24,7 +24,7 @@ public class Main {
 
 		long startTime = System.currentTimeMillis();
 		// Compute the Mandelbrot set using the parallel method
-		MandelbrotCalculator.compute(bbox, maxIterations, imageBuffer);
+		MandelbrotCalculator.parCompute(bbox, maxIterations, imageBuffer);
 
 		// Create a BufferedImage from the image buffer
 		BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
